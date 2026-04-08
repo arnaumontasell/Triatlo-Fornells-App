@@ -1,122 +1,623 @@
 <!DOCTYPE html>
 <html lang="ca">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Triatló Fornells App</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Triatló Fornells App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      body { -webkit-font-smoothing: antialiased; }
+      .hidden-tab { display: none; }
+    </style>
+  </head>
+  <body class="bg-slate-50 text-slate-900">
+    <div id="app" class="mx-auto max-w-6xl p-4 pb-24"></div>
 
-<body class="bg-slate-50 p-4">
+    <script>
+      const START_DATE = "2026-04-08";
+      const RACE_DATE = "2026-09-27";
+      const STORAGE_KEY = "fornells-pro-app-v1";
 
-<div class="max-w-3xl mx-auto space-y-6">
+      const phases = [
+        { name: "Base", startWeek: 1, endWeek: 7, color: "bg-slate-100 text-slate-700" },
+        { name: "Construcció", startWeek: 8, endWeek: 14, color: "bg-blue-100 text-blue-700" },
+        { name: "Específica", startWeek: 15, endWeek: 22, color: "bg-amber-100 text-amber-700" },
+        { name: "Taper", startWeek: 23, endWeek: 24, color: "bg-emerald-100 text-emerald-700" },
+      ];
 
-  <div class="bg-white p-5 rounded-2xl shadow">
-    <h1 class="text-2xl font-bold">Triatló Fornells</h1>
-    <p class="text-sm text-gray-600">Entrena amb cap i adapta't cada dia</p>
-  </div>
+      const weekTemplates = {
+        base: [
+          { day: "Dilluns", type: "run", title: "Run suau + core", details: "6-8 km a ritme còmode (5:30-5:15/km) + 10' core", duration: "60-75 min", focus: "Base aeròbica", workout: ["10' escalfament suau", "6-8 km ritme còmode", "3 progressius de 15-20 s", "Core curt: planxa 3x40 s + dead bug 2x10/costat"] },
+          { day: "Dimarts", type: "strength", title: "Força curta + bici suau", details: "15-20' força + 35-45' bici carretera", duration: "50-65 min", focus: "Eficiència + estabilitat", workout: ["Press banca 3x8-10", "Rem mancuerna 3x10/costat", "Planxa frontal 3x35-45 s", "Bici 35-45' molt còmode amb cadència alta"] },
+          { day: "Dimecres", type: "run", title: "Intervals / VO2", details: "5x400 m controlats + escalfament i tornada a la calma", duration: "50-65 min", focus: "VO2 max", workout: ["12' escalfament", "5x400 m ritme controlat viu", "Recuperació 1'30-2' caminant o trote", "10' tornada a la calma"] },
+          { day: "Dijous", type: "strength", title: "Força full body", details: "Cames, tren superior i core", duration: "35-45 min", focus: "Core i estabilitat", workout: ["Sentadilla goblet 3x10-12", "Pes mort romanès 3x10", "Zancades 3x8/cama", "Press banca 3x8-10", "Bird dog 2x10/costat", "Pilota funcional 2x12-15"] },
+          { day: "Divendres", type: "rest", title: "Descans", details: "Descans complet o mobilitat molt suau", duration: "—", focus: "Recuperació", workout: ["Passeig suau opcional", "Mobilitat 10' si et notes carregat"] },
+          { day: "Dissabte", type: "brick", title: "Brick suau + força curta", details: "60' bici + 2-3 km run + 10' core", duration: "85-100 min", focus: "Transició", workout: ["Bici 60' suau-moderada", "Transició ràpida", "2-3 km run còmode", "Core: planxa lateral 2x30 s/costat + dead bug 2x10"] },
+          { day: "Diumenge", type: "bike", title: "BTT llarga", details: "Volta habitual 40-50 km", duration: "2h30-3h", focus: "Resistència", workout: ["Sortida BTT 40-50 km", "Ritme constant", "Hidratació i menjar si passes d'1h30"] },
+        ],
+        build: [
+          { day: "Dilluns", type: "run", title: "Run qualitat", details: "6x600 o 4x800 controlats", duration: "55-70 min", focus: "Velocitat aeròbica", workout: ["12' escalfament", "6x600 o 4x800 a ritme controlat", "Recuperació suau", "10' refredar"] },
+          { day: "Dimarts", type: "swim", title: "Natació tècnica + força curta", details: "200 suaus + 6x50 tècnica + 4x100 + 10' core", duration: "55-70 min", focus: "Entrada a l'aigua", workout: ["200 m suaus", "6x50 tècnica", "4x100 controlats", "10' core / escàpula amb gomes o pes lleuger"] },
+          { day: "Dimecres", type: "bike", title: "Bici carretera", details: "60-75' amb blocs moderats", duration: "60-75 min", focus: "Potència sostinguda", workout: ["15' suau", "3x8' a ritme moderat", "Recuperació 4' suau", "10' refredar"] },
+          { day: "Dijous", type: "strength", title: "Força full body", details: "Treball funcional i gomes per natació", duration: "35-45 min", focus: "Prevenció", workout: ["Sentadilla goblet 3x10", "Press banca 3x8-10", "Rem mancuerna 3x10/costat", "Elevacions Y-T-W 2x8", "Planxa 3x40 s"] },
+          { day: "Divendres", type: "rest", title: "Descans", details: "Descans o mobilitat", duration: "—", focus: "Recuperació", workout: ["Descans complet o mobilitat 10'"] },
+          { day: "Dissabte", type: "brick", title: "Brick mitjà + força curta", details: "75-90' bici + 4-5 km run + 10' core", duration: "105-130 min", focus: "Especificitat", workout: ["Bici 75-90'", "4-5 km run còmode", "Core curt final"] },
+          { day: "Diumenge", type: "swim", title: "Natació resistència", details: "1.000-1.500 m progressius", duration: "35-50 min", focus: "Fons a l'aigua", workout: ["300 suaus", "3x200", "4x100", "100-200 suau final"] },
+        ],
+        specific: [
+          { day: "Dilluns", type: "swim", title: "Natació contínua + core curt", details: "1.200-1.800 m + 10' core", duration: "50-65 min", focus: "Resistència", workout: ["Blocs llargs o continu", "Treballar ritme còmode i eficient", "Core curt després"] },
+          { day: "Dimarts", type: "run", title: "Run tempo", details: "2 km suau + 5-6 km alegres però controlats + 1 km suau", duration: "50-65 min", focus: "Ritme carrera", workout: ["2 km suaus", "5-6 km ritme sostingut sense ofegar-te", "1 km molt suau"] },
+          { day: "Dimecres", type: "bike", title: "Bici específica + força curta", details: "75-90' a ritme de competició + 10' core", duration: "90-105 min", focus: "Pacing", workout: ["15' suau", "2-3 blocs a ritme de cursa", "10' molt suau", "Core curt"] },
+          { day: "Dijous", type: "strength", title: "Força lleugera + mobilitat", details: "Activació, core i tren superior", duration: "25-35 min", focus: "Manteniment", workout: ["Pont de glutis 2x15", "Press banca lleuger 2x10", "Rem lleuger 2x10/costat", "Planxa 2x30 s", "Mobilitat 5-8'"] },
+          { day: "Divendres", type: "rest", title: "Descans", details: "Descans complet", duration: "—", focus: "Recuperació", workout: ["Descans complet"] },
+          { day: "Dissabte", type: "brick", title: "Brick llarg + força curta", details: "30-35 km bici + 5-7 km run + 10' core", duration: "2h-2h30", focus: "Simulació", workout: ["30-35 km bici a ritme controlat", "5-7 km run còmode", "Core final si et trobes bé"] },
+          { day: "Diumenge", type: "swim", title: "Mar / tècnica", details: "Nedar al mar o piscina suau", duration: "35-50 min", focus: "Aigües obertes", workout: ["Treballar orientació", "Entrades i sortides", "Ritme molt còmode"] },
+        ],
+        taper: [
+          { day: "Dilluns", type: "swim", title: "Natació suau", details: "1.000-1.200 m còmodes", duration: "30-40 min", focus: "Activació", workout: ["Tècnica + sensacions"] },
+          { day: "Dimarts", type: "run", title: "Run curt + core", details: "5-6 km amb progressius + 10' core", duration: "40-50 min", focus: "Frescor", workout: ["5-6 km suau", "4 progressius", "Core molt curt"] },
+          { day: "Dimecres", type: "bike", title: "Bici curta + força curta", details: "45-60' + 10' tren superior", duration: "55-70 min", focus: "Sensacions", workout: ["45-60' suaus amb petites activacions", "10' tren superior lleuger"] },
+          { day: "Dijous", type: "strength", title: "Core i mobilitat", details: "Molt lleuger", duration: "15-20 min", focus: "Tonus", workout: ["Planxa 2x20-30 s", "Mobilitat 10'"] },
+          { day: "Divendres", type: "rest", title: "Descans", details: "Descans complet", duration: "—", focus: "Recuperació", workout: ["Descans"] },
+          { day: "Dissabte", type: "brick", title: "Activació", details: "20-30' bici + 10' run", duration: "30-45 min", focus: "Despertar cames", workout: ["Moure el cos sense cansar-te"] },
+          { day: "Diumenge", type: "race", title: "TRIATLÓ DE FORNELLS", details: "1500 m / 40 km / 10 km", duration: "Objectiu", focus: "Competició", workout: ["Gaudir", "Ritme amb control", "Arribar fort"] },
+        ],
+      };
 
-  <div class="bg-white p-5 rounded-2xl shadow">
-    <h2 class="text-xl font-semibold mb-3">Entrenament setmanal</h2>
+      const alternatives = {
+        bike: [
+          { type: "run", title: "Run suau alternatiu", details: "6-8 km a ritme còmode" },
+          { type: "strength", title: "Força + core", details: "20-30' core i tren superior" },
+        ],
+        run: [
+          { type: "bike", title: "Bici suau", details: "45-60' cadència alta" },
+          { type: "strength", title: "Força", details: "Treball de cames + core" },
+        ],
+        strength: [
+          { type: "run", title: "Run curt", details: "4-5 km suau" },
+          { type: "bike", title: "Bici curta", details: "30-45' suau" },
+        ],
+        brick: [
+          { type: "bike", title: "Només bici", details: "60-75' suau" },
+          { type: "run", title: "Només run", details: "5-7 km còmode" },
+          { type: "strength", title: "Core + tren superior", details: "20-25' treball funcional" },
+        ],
+        swim: [
+          { type: "strength", title: "Gomes + escàpula", details: "15-20' activació específica de natació" },
+          { type: "run", title: "Run regeneratiu", details: "4-6 km molt suaus" },
+        ],
+      };
 
-    <div class="space-y-3">
+      const warmups = {
+        run: ['30" skipping', '30" talons al gluti', "8 zancades per cama", "3 progressius de 15-20 s"],
+        bike: ["1' mobilitat maluc", "12 ponts de glutis", "2' pedaleig molt suau", "2' cadència alta"],
+        swim: ["Gomes: 2x12 traccions", "2x10 rotació escàpules", '20" planxa', "Mobilitat espatlla"],
+        strength: ["1' mobilitat general", "10 squats aire", "10 hip hinges", '20" planxa'],
+        brick: ["2' bici molt suau", "1' mobilitat maluc", "2 progressius curts corrent", "Respiració i calma"],
+      };
 
-      <div class="border p-3 rounded-xl">
-        <b>🏃 Dilluns:</b> Run suau 6-8 km + core
-      </div>
+      const strengthPlans = {
+        short: {
+          title: "Força curta · 15-20 min",
+          blocks: [
+            { name: "Core + tren superior", items: [
+              "Press banca amb mancuernes o barra: 3 x 8-10",
+              "Rem amb mancuerna: 3 x 10/costat",
+              "Planxa frontal: 3 x 35-45 s",
+              "Dead bug: 2 x 10/costat",
+              "Elevacions Y-T-W: 2 x 8 cada lletra",
+            ]},
+            { name: "Opcional final", items: ["Pilota funcional: 2 x 12 crunch o passades"] },
+          ],
+        },
+        full: {
+          title: "Força full body · 35-45 min",
+          blocks: [
+            { name: "Bloc 1 · Cames", items: [
+              "Sentadilla goblet amb mancuerna: 3 x 10-12",
+              "Pes mort romanès amb mancuernes: 3 x 10",
+              "Zancades alternes: 3 x 8/cama",
+              "Elevacions de bessons: 3 x 18-20",
+            ]},
+            { name: "Bloc 2 · Tren superior", items: [
+              "Press banca: 3 x 8-10",
+              "Rem amb mancuerna: 3 x 10/costat",
+              "Flexions: 2-3 x 8-15",
+            ]},
+            { name: "Bloc 3 · Core", items: [
+              "Planxa frontal: 3 x 40 s",
+              "Planxa lateral: 2 x 30 s/costat",
+              "Bird dog: 2 x 10/costat",
+              "Pilota funcional: 2 x 12-15",
+            ]},
+          ],
+        },
+        light: {
+          title: "Força lleugera · 20-25 min",
+          blocks: [
+            { name: "Activació i manteniment", items: [
+              "Pont de glutis: 2 x 15",
+              "Sentadilla aire o lleugera: 2 x 12",
+              "Press banca lleuger: 2 x 10",
+              "Rem lleuger: 2 x 10/costat",
+              "Planxa: 2 x 30 s",
+            ]},
+          ],
+        },
+      };
 
-      <div class="border p-3 rounded-xl">
-        <b>🏋️ Dimarts:</b> Força + bici suau
-      </div>
+      const dietPlan = {
+        guidelines: [
+          "Base mediterrània: menjar sa, variat i fàcil de mantenir.",
+          "Proteïna a cada àpat principal per recuperar millor.",
+          "Hidrats sobretot al voltant dels entrenaments.",
+          "Verdures cada dia i fruita 2-3 cops al dia.",
+          "Hidratació regular durant tot el dia.",
+        ],
+        mealIdeas: {
+          breakfast: [
+            "Pa integral amb ous i tomàquet + fruita",
+            "Iogurt grec natural amb civada i fruita",
+            "Torrades amb gall dindi o formatge fresc + fruita",
+          ],
+          lunch: [
+            "Arròs amb pollastre i verdures",
+            "Pasta amb tonyina o salmó i amanida",
+            "Llenties o cigrons amb verdures i una proteïna lleugera",
+          ],
+          snack: [
+            "Iogurt + fruita + fruits secs",
+            "Entrepà petit de pernil dolç o gall dindi",
+            "Fruita + un grapat de fruits secs",
+          ],
+          dinner: [
+            "Verdura + salmó + patata o arròs si has entrenat",
+            "Truita / ous amb amanida i pa integral",
+            "Pollastre o gall dindi amb verdures i una mica d'hidrat",
+          ],
+        },
+        aroundTraining: [
+          "Abans d'entrenar: alguna cosa lleugera si fa moltes hores que no menges (fruita, iogurt, torrada).",
+          "Després d'entrenar: proteïna + hidrats per recuperar (iogurt i fruita, entrepà, àpat complet).",
+          "Per tirades llargues de bici: aigua i alguna font d'energia si passes d'1h15-1h30.",
+        ],
+        weeklyMenu: {
+          dilluns: { esmorzar: "Pa integral amb ous + fruita", dinar: "Arròs amb pollastre i verdures", berenar: "Iogurt + fruita", sopar: "Verdura + salmó" },
+          dimarts: { esmorzar: "Iogurt grec amb civada", dinar: "Pasta amb tonyina i amanida", berenar: "Fruits secs + fruita", sopar: "Truita + amanida + pa integral" },
+          dimecres: { esmorzar: "Torrades amb gall dindi + fruita", dinar: "Llenties amb verdures", berenar: "Iogurt + fruita", sopar: "Pollastre + verdures + una mica d'arròs" },
+          dijous: { esmorzar: "Pa integral amb formatge fresc", dinar: "Arròs amb salmó i verdures", berenar: "Entrepà petit de gall dindi", sopar: "Ous + amanida" },
+          divendres: { esmorzar: "Iogurt + civada + fruita", dinar: "Pasta amb pollastre", berenar: "Fruita + fruits secs", sopar: "Peix + verdura" },
+          dissabte: { esmorzar: "Pa integral + ous", dinar: "Arròs o pasta segons entreno", berenar: "Iogurt + fruita", sopar: "Sopar complet però lleuger" },
+          diumenge: { esmorzar: "Esmorzar complet pre-sortida", dinar: "Àpat recuperador amb hidrats + proteïna", berenar: "Fruita o iogurt", sopar: "Verdura + proteïna lleugera" },
+        }
+      };
 
-      <div class="border p-3 rounded-xl">
-        <b>🏃 Dimecres:</b> Series 5x400
-      </div>
+      function daysBetween(a, b) {
+        const ms = new Date(b).setHours(0,0,0,0) - new Date(a).setHours(0,0,0,0);
+        return Math.floor(ms / (1000 * 60 * 60 * 24));
+      }
+      function getCurrentWeek() {
+        const diff = daysBetween(START_DATE, new Date().toISOString().slice(0,10));
+        return Math.max(1, Math.min(24, Math.floor(diff / 7) + 1));
+      }
+      function getPhaseFromWeek(week) {
+        if (week <= 7) return "base";
+        if (week <= 14) return "build";
+        if (week <= 22) return "specific";
+        return "taper";
+      }
+      function getWeekPlan(week) { return weekTemplates[getPhaseFromWeek(week)]; }
+      function getPhaseLabel(week) { return phases.find(p => week >= p.startWeek && week <= p.endWeek) || phases[0]; }
+      function getTodayIndex() { const d = new Date().getDay(); return d === 0 ? 6 : d - 1; }
+      function emoji(type) { return { run:"🏃", bike:"🚴", swim:"🏊", strength:"🏋️", brick:"🔁", rest:"😴", race:"🏁" }[type] || "📅"; }
+      function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
-      <div class="border p-3 rounded-xl">
-        <b>🏋️ Dijous:</b> Força full body
-      </div>
+      const state = loadState();
+      function loadState() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        return saved ? JSON.parse(saved) : {
+          week: getCurrentWeek(),
+          checks: {},
+          logs: {},
+          goal: "enjoy",
+          notes: "",
+          metrics: { weight:"", restingHR:"", runComfortPace:"5:30/km", bikeNotes:"", swimNotes:"" },
+          activeTab: "pla"
+        };
+      }
+      function saveState() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+      function ensureLogs() {
+        const plan = getWeekPlan(state.week);
+        plan.forEach((session, idx) => {
+          const key = `${state.week}-${idx}`;
+          if (!state.logs[key]) {
+            state.logs[key] = { plannedType: session.type, actualType: session.type, time:"", distance:"", feeling:"", notes:"", adapted:false };
+          }
+        });
+      }
 
-      <div class="border p-3 rounded-xl">
-        <b>😴 Divendres:</b> Descans
-      </div>
+      function render() {
+        ensureLogs();
+        const app = document.getElementById("app");
+        const plan = getWeekPlan(state.week);
+        const phase = getPhaseLabel(state.week);
+        const todayIdx = getTodayIndex();
+        const todayWorkout = plan[todayIdx];
+        const todayLog = state.logs[`${state.week}-${todayIdx}`] || { actualType: todayWorkout.type, adapted:false };
+        const completion = Math.round((plan.filter((_, i) => state.checks[`${state.week}-${i}`]).length / plan.length) * 100);
+        const daysToRace = daysBetween(new Date().toISOString().slice(0,10), RACE_DATE);
 
-      <div class="border p-3 rounded-xl">
-        <b>🔁 Dissabte:</b> Brick bici + run
-      </div>
+        app.innerHTML = `
+          <div class="grid gap-4 lg:grid-cols-3">
+            <div class="lg:col-span-2 rounded-3xl bg-white p-5 shadow-sm border">
+              <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <h1 class="text-2xl md:text-3xl font-bold">Pla Triatló Olímpic · Fornells 2026</h1>
+                  <p class="mt-2 text-sm text-slate-600">App completa per entrenar, readaptar dies complicats i tenir una guia de nutrició i força a casa.</p>
+                </div>
+                <span class="inline-flex rounded-full px-3 py-1 text-sm font-medium ${phase.color}">Fase ${phase.name}</span>
+              </div>
+              <div class="mt-4 grid gap-4 md:grid-cols-4">
+                ${statCard("Setmana actual", `${state.week} / 24`)}
+                ${statCard("Dies fins la cursa", String(daysToRace))}
+                ${statCard("Compliment setmanal", `${completion}%`)}
+                ${statCard("Objectiu", state.goal === "finish" ? "Acabar bé" : state.goal === "steady" ? "Bon ritme" : "Disfrutar fort")}
+              </div>
+              <div class="mt-5 h-3 overflow-hidden rounded-full bg-slate-200"><div class="h-full bg-slate-800" style="width:${(state.week/24)*100}%"></div></div>
+            </div>
 
-      <div class="border p-3 rounded-xl">
-        <b>🚴 Diumenge:</b> BTT llarga
-      </div>
+            <div class="rounded-3xl bg-white p-5 shadow-sm border">
+              <div class="text-sm text-slate-500">Entreno d'avui</div>
+              <div class="mt-2 text-lg font-semibold">${emoji(todayLog.actualType || todayWorkout.type)} ${todayWorkout.title}</div>
+              <div class="mt-2 text-sm text-slate-600">${todayWorkout.details}</div>
+              <div class="mt-3 flex flex-wrap gap-2 text-xs">
+                <span class="rounded-full bg-slate-100 px-3 py-1">${todayWorkout.duration}</span>
+                <span class="rounded-full bg-slate-100 px-3 py-1">${todayWorkout.focus}</span>
+                ${todayLog.adapted ? '<span class="rounded-full bg-blue-100 text-blue-700 px-3 py-1">Dia adaptat</span>' : ''}
+              </div>
+              <div class="mt-4">
+                <div class="mb-2 text-sm font-medium">Activació recomanada</div>
+                <ul class="space-y-1 text-sm text-slate-600">
+                  ${(warmups[todayLog.actualType || todayWorkout.type] || []).map(item => `<li>• ${item}</li>`).join("")}
+                </ul>
+              </div>
+            </div>
+          </div>
 
-    </div>
-  </div>
+          <div class="mt-6 rounded-3xl bg-white p-2 shadow-sm border">
+            <div class="grid grid-cols-5 gap-2">
+              ${tabButton("pla","Pla")}
+              ${tabButton("registre","Registre")}
+              ${tabButton("forca","Força")}
+              ${tabButton("nutricio","Nutrició")}
+              ${tabButton("objectiu","Objectiu")}
+            </div>
+          </div>
 
-  <div class="bg-white p-5 rounded-2xl shadow">
-    <h2 class="text-xl font-semibold mb-3">Força (a casa)</h2>
+          <div id="tab-pla" class="mt-4 ${state.activeTab !== "pla" ? "hidden-tab" : ""}">
+            <div class="grid gap-4 lg:grid-cols-[1.08fr_0.92fr]">
+              <div class="rounded-3xl bg-white p-5 shadow-sm border">
+                <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <h2 class="text-xl font-semibold">Planificació setmanal</h2>
+                  <div class="flex gap-2 flex-wrap">
+                    <button data-action="prev-week" class="rounded-2xl border px-4 py-2 text-sm">Setmana anterior</button>
+                    <button data-action="next-week" class="rounded-2xl border px-4 py-2 text-sm">Següent</button>
+                  </div>
+                </div>
+                <div class="mt-4 space-y-3">
+                  ${plan.map((session, idx) => renderSessionCard(session, idx)).join("")}
+                </div>
+              </div>
+              <div class="space-y-4">
+                <div class="rounded-3xl bg-white p-5 shadow-sm border">
+                  <h2 class="text-xl font-semibold">Readaptació intel·ligent</h2>
+                  <div class="mt-3 space-y-3 text-sm text-slate-600">
+                    <div class="rounded-2xl border p-4">
+                      <div class="font-medium text-slate-800">Si avui no et quadra</div>
+                      <p class="mt-2">Obre el teu entreno i toca <strong>Alternatives</strong>. Pots substituir-lo per una altra opció útil i quedarà marcat com a adaptat.</p>
+                    </div>
+                    <div class="rounded-2xl border p-4">
+                      <div class="font-medium text-slate-800">Complet a mòbil</div>
+                      <p class="mt-2">Pensat perquè ho facis servir des de l'iPhone amb botons grans i guardat automàtic.</p>
+                    </div>
+                  </div>
+                </div>
+                <div class="rounded-3xl bg-white p-5 shadow-sm border">
+                  <h2 class="text-xl font-semibold">Fases del pla</h2>
+                  <div class="mt-4 space-y-3">
+                    ${phases.map(phase => `
+                      <div class="rounded-2xl border p-4">
+                        <div class="flex items-center justify-between">
+                          <div class="font-semibold">${phase.name}</div>
+                          <span class="rounded-full px-3 py-1 text-xs ${phase.color}">Setm. ${phase.startWeek}-${phase.endWeek}</span>
+                        </div>
+                        <p class="mt-2 text-sm text-slate-600">${phase.name === 'Base' ? 'Construir base sense fatiga, gaudir dels entrenaments i crear rutina.' : phase.name === 'Construcció' ? 'Introduir la natació a partir del juny, més ritme i bricks més seriosos.' : phase.name === 'Específica' ? 'Entrenos semblants a la cursa i simulacions.' : 'Baixar volum per arribar fresc a Fornells.'}</p>
+                      </div>`).join("")}
+                    <button data-action="reset-week" class="w-full rounded-2xl border px-4 py-2 text-sm">Reiniciar setmana</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-    <ul class="text-sm space-y-1">
-      <li>• Press banca: 3x8-10</li>
-      <li>• Rem mancuerna: 3x10</li>
-      <li>• Sentadilla goblet: 3x12</li>
-      <li>• Zancades: 3x8</li>
-      <li>• Planxa: 3x40s</li>
-      <li>• Pilota funcional: 2x12</li>
-    </ul>
-  </div>
+          <div id="tab-registre" class="mt-4 ${state.activeTab !== "registre" ? "hidden-tab" : ""}">
+            <div class="grid gap-4 lg:grid-cols-[1.05fr_0.95fr]">
+              <div class="rounded-3xl bg-white p-5 shadow-sm border">
+                <h2 class="text-xl font-semibold">Registre de sessions</h2>
+                <div class="mt-4 space-y-4">
+                  ${plan.map((session, idx) => renderLogCard(session, idx)).join("")}
+                </div>
+              </div>
+              <div class="space-y-4">
+                <div class="rounded-3xl bg-white p-5 shadow-sm border">
+                  <h2 class="text-xl font-semibold">Mètriques personals</h2>
+                  <div class="mt-4 grid gap-3">
+                    ${metricField("weight","Pes actual","Ex: 65 kg")}
+                    ${metricField("restingHR","FC repòs","Ex: 52 bpm")}
+                    ${metricField("runComfortPace","Ritme còmode run","Ex: 5:30/km")}
+                    ${metricField("bikeNotes","Notes bici","Ex: millor en cadència alta")}
+                    ${metricField("swimNotes","Notes natació","Ex: tornar a piscina al juny")}
+                  </div>
+                </div>
+                <div class="rounded-3xl bg-white p-5 shadow-sm border">
+                  <h2 class="text-xl font-semibold">Notes generals</h2>
+                  <textarea data-notes class="mt-4 min-h-[180px] w-full rounded-2xl border p-3">${escapeHtml(state.notes || "")}</textarea>
+                </div>
+              </div>
+            </div>
+          </div>
 
-  <div class="bg-white p-5 rounded-2xl shadow">
-    <h2 class="text-xl font-semibold mb-3">Nutrició equilibrada</h2>
+          <div id="tab-forca" class="mt-4 ${state.activeTab !== "forca" ? "hidden-tab" : ""}">
+            <div class="grid gap-4 lg:grid-cols-[1fr_1fr]">
+              <div class="rounded-3xl bg-white p-5 shadow-sm border">
+                <h2 class="text-xl font-semibold">Plans de força detallats</h2>
+                <div class="mt-4 space-y-4">
+                  ${Object.values(strengthPlans).map(plan => `
+                    <div class="rounded-2xl border p-4">
+                      <div class="font-semibold">${plan.title}</div>
+                      <div class="mt-3 space-y-3">
+                        ${plan.blocks.map(block => `
+                          <div>
+                            <div class="text-sm font-medium text-slate-800">${block.name}</div>
+                            <ul class="mt-1 space-y-1 text-sm text-slate-600">
+                              ${block.items.map(item => `<li>• ${item}</li>`).join("")}
+                            </ul>
+                          </div>`).join("")}
+                      </div>
+                    </div>`).join("")}
+                </div>
+              </div>
+              <div class="space-y-4">
+                <div class="rounded-3xl bg-white p-5 shadow-sm border">
+                  <h2 class="text-xl font-semibold">Activació pre-entreno</h2>
+                  <div class="mt-4 space-y-4">
+                    ${warmupBox("Abans de córrer", warmups.run)}
+                    ${warmupBox("Abans de la bici", warmups.bike)}
+                    ${warmupBox("Per natació en sec", warmups.swim)}
+                  </div>
+                </div>
+                <div class="rounded-3xl bg-white p-5 shadow-sm border">
+                  <h2 class="text-xl font-semibold">Material que tens a casa</h2>
+                  <div class="mt-3 space-y-2 text-sm text-slate-600">
+                    <p>• Mancuernes fins a 8 kg</p>
+                    <p>• Press banca</p>
+                    <p>• Pilota funcional</p>
+                    <p>• Amb això pots fer una preparació de força molt útil per run, bici i natació.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-    <p class="text-sm text-gray-600 mb-3">Menjar sa, senzill i sostenible</p>
+          <div id="tab-nutricio" class="mt-4 ${state.activeTab !== "nutricio" ? "hidden-tab" : ""}">
+            <div class="grid gap-4 lg:grid-cols-[1fr_1fr]">
+              <div class="rounded-3xl bg-white p-5 shadow-sm border">
+                <h2 class="text-xl font-semibold">Nutrició equilibrada</h2>
+                <div class="mt-4 rounded-2xl border p-4">
+                  <div class="font-semibold">Principis base</div>
+                  <ul class="mt-2 space-y-1 text-sm text-slate-600">
+                    ${dietPlan.guidelines.map(item => `<li>• ${item}</li>`).join("")}
+                  </ul>
+                </div>
+                <div class="mt-4 grid gap-3 md:grid-cols-2">
+                  ${mealIdeasCard("Esmorzars", dietPlan.mealIdeas.breakfast)}
+                  ${mealIdeasCard("Dinars", dietPlan.mealIdeas.lunch)}
+                  ${mealIdeasCard("Berenars", dietPlan.mealIdeas.snack)}
+                  ${mealIdeasCard("Sopars", dietPlan.mealIdeas.dinner)}
+                </div>
+              </div>
+              <div class="space-y-4">
+                <div class="rounded-3xl bg-white p-5 shadow-sm border">
+                  <h2 class="text-xl font-semibold">Abans i després d'entrenar</h2>
+                  <ul class="mt-3 space-y-2 text-sm text-slate-600">
+                    ${dietPlan.aroundTraining.map(item => `<li>• ${item}</li>`).join("")}
+                  </ul>
+                </div>
+                <div class="rounded-3xl bg-white p-5 shadow-sm border">
+                  <h2 class="text-xl font-semibold">Menú setmanal orientatiu</h2>
+                  <div class="mt-4 space-y-3">
+                    ${Object.entries(dietPlan.weeklyMenu).map(([day, meals]) => `
+                      <div class="rounded-2xl border p-4">
+                        <div class="font-semibold">${cap(day)}</div>
+                        <div class="mt-2 text-sm text-slate-600"><strong>Esmorzar:</strong> ${meals.esmorzar}</div>
+                        <div class="mt-1 text-sm text-slate-600"><strong>Dinar:</strong> ${meals.dinar}</div>
+                        <div class="mt-1 text-sm text-slate-600"><strong>Berenar:</strong> ${meals.berenar}</div>
+                        <div class="mt-1 text-sm text-slate-600"><strong>Sopar:</strong> ${meals.sopar}</div>
+                      </div>`).join("")}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
 
-    <div class="grid grid-cols-2 gap-4 text-sm">
+          <div id="tab-objectiu" class="mt-4 ${state.activeTab !== "objectiu" ? "hidden-tab" : ""}">
+            <div class="grid gap-4 lg:grid-cols-[1fr_1fr]">
+              <div class="rounded-3xl bg-white p-5 shadow-sm border">
+                <h2 class="text-xl font-semibold">Objectiu de cursa</h2>
+                <div class="mt-4">
+                  <label class="mb-2 block text-sm text-slate-600">Selecciona objectiu</label>
+                  <select data-goal class="w-full rounded-2xl border p-3">
+                    <option value="finish" ${state.goal === 'finish' ? 'selected' : ''}>Acabar bé</option>
+                    <option value="steady" ${state.goal === 'steady' ? 'selected' : ''}>Bon ritme i control</option>
+                    <option value="enjoy" ${state.goal === 'enjoy' ? 'selected' : ''}>Disfrutar fort</option>
+                  </select>
+                </div>
+                <div class="mt-4 grid gap-3 md:grid-cols-2">
+                  ${goalCard("Natació", "Sensació còmoda, sense estrès")}
+                  ${goalCard("Bici", "Ritme constant, sense buidar-te")}
+                  ${goalCard("Run", "Acabar amb control, no patint")}
+                  ${goalCard("Objectiu global", "Disfrutar i acabar fort")}
+                </div>
+              </div>
+              <div class="rounded-3xl bg-white p-5 shadow-sm border">
+                <h2 class="text-xl font-semibold">Checklist competició</h2>
+                <div class="mt-4 space-y-3 text-sm text-slate-600">
+                  ${checkItem("Practicar natació al mar al juliol i agost")}
+                  ${checkItem("Fer bricks llargs a l'agost")}
+                  ${checkItem("Provar nutrició i hidratació a la bici")}
+                  ${checkItem("Testar transicions amb el material real")}
+                  ${checkItem("Arribar a setembre sense lesions i amb bones sensacions")}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+        bindEvents();
+      }
 
-      <div>
-        <b>Esmorzar</b>
-        <ul>
-          <li>• Pa integral + ous</li>
-          <li>• Iogurt + civada</li>
-          <li>• Fruita</li>
-        </ul>
-      </div>
+      function renderSessionCard(session, idx) {
+        const key = `${state.week}-${idx}`;
+        const log = state.logs[key];
+        const checked = !!state.checks[key];
+        const actualType = log.actualType || session.type;
+        return `
+          <div class="rounded-2xl border p-4 ${checked ? 'bg-emerald-50 border-emerald-300' : 'bg-white'}">
+            <div class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+              <div class="min-w-0 space-y-2">
+                <div class="font-semibold">${emoji(actualType)} ${session.day} · ${session.title}</div>
+                <div class="text-sm text-slate-600">${session.details}</div>
+                <div class="flex flex-wrap gap-2 text-xs">
+                  <span class="rounded-full bg-slate-100 px-3 py-1">${session.duration}</span>
+                  <span class="rounded-full bg-slate-100 px-3 py-1">${session.focus}</span>
+                  ${log.adapted ? '<span class="rounded-full bg-blue-100 text-blue-700 px-3 py-1">Adaptat</span>' : ''}
+                </div>
+                <div class="rounded-2xl bg-slate-50 p-3 text-sm text-slate-700">
+                  <div class="font-medium mb-1">Entrenament detallat</div>
+                  <ul class="space-y-1">${session.workout.map(item => `<li>• ${item}</li>`).join("")}</ul>
+                </div>
+                ${alternatives[session.type] ? `
+                <div>
+                  <button data-action="toggle-alt" data-idx="${idx}" class="rounded-xl border px-3 py-2 text-sm">Alternatives</button>
+                  <div id="alt-${idx}" class="mt-2 hidden space-y-2">
+                    ${alternatives[session.type].map(alt => `
+                      <button data-action="apply-alt" data-idx="${idx}" data-type="${alt.type}" class="block w-full rounded-xl border bg-slate-50 p-3 text-left hover:bg-slate-100">
+                        <div class="font-medium">${emoji(alt.type)} ${alt.title}</div>
+                        <div class="text-sm text-slate-600">${alt.details}</div>
+                      </button>`).join("")}
+                    <button data-action="reset-alt" data-idx="${idx}" class="block w-full rounded-xl border border-dashed bg-white p-3 text-left text-sm text-slate-600">Tornar a l'entreno original</button>
+                  </div>
+                </div>` : ''}
+              </div>
+              <label class="flex items-center gap-2 text-sm shrink-0">
+                <input type="checkbox" data-action="toggle-check" data-idx="${idx}" ${checked ? 'checked' : ''}>
+                Completat
+              </label>
+            </div>
+          </div>`;
+      }
 
-      <div>
-        <b>Dinar</b>
-        <ul>
-          <li>• Arròs o pasta</li>
-          <li>• Pollastre o salmó</li>
-          <li>• Verdures</li>
-        </ul>
-      </div>
+      function renderLogCard(session, idx) {
+        const key = `${state.week}-${idx}`;
+        const log = state.logs[key];
+        return `
+          <div class="rounded-2xl border p-4">
+            <div class="mb-3 flex flex-wrap items-center gap-2 font-medium">${emoji(log.actualType || session.type)} ${session.day} · ${session.title} ${log.adapted ? '<span class="rounded-full bg-blue-100 text-blue-700 px-3 py-1 text-xs">Adaptat</span>' : ''}</div>
+            <div class="grid gap-3 md:grid-cols-2">
+              <div>
+                <label class="mb-1 block text-sm text-slate-600">Entreno previst</label>
+                <input class="w-full rounded-xl border bg-slate-50 p-3" value="${escapeHtml(log.plannedType || session.type)}" readonly>
+              </div>
+              <div>
+                <label class="mb-1 block text-sm text-slate-600">Entreno fet</label>
+                <select data-log-type="${idx}" class="w-full rounded-xl border p-3">
+                  ${["run","bike","strength","brick","swim","rest"].map(t => `<option value="${t}" ${log.actualType === t ? 'selected' : ''}>${t}</option>`).join("")}
+                </select>
+              </div>
+            </div>
+            <div class="mt-3 grid gap-3 md:grid-cols-3">
+              <div>
+                <label class="mb-1 block text-sm text-slate-600">Temps</label>
+                <input data-log-time="${idx}" class="w-full rounded-xl border p-3" value="${escapeHtml(log.time || '')}" placeholder="Ex: 58 min">
+              </div>
+              <div>
+                <label class="mb-1 block text-sm text-slate-600">Distància</label>
+                <input data-log-distance="${idx}" class="w-full rounded-xl border p-3" value="${escapeHtml(log.distance || '')}" placeholder="Ex: 8 km">
+              </div>
+              <div>
+                <label class="mb-1 block text-sm text-slate-600">Sensacions</label>
+                <select data-log-feeling="${idx}" class="w-full rounded-xl border p-3">
+                  ${["","Molt bé","Bé","Mitjà","Dur"].map(v => `<option value="${v}" ${log.feeling === v ? 'selected' : ''}>${v || 'Selecciona'}</option>`).join("")}
+                </select>
+              </div>
+            </div>
+            <div class="mt-3">
+              <label class="mb-1 block text-sm text-slate-600">Notes</label>
+              <textarea data-log-notes="${idx}" class="min-h-[88px] w-full rounded-2xl border p-3">${escapeHtml(log.notes || '')}</textarea>
+            </div>
+          </div>`;
+      }
 
-      <div>
-        <b>Berenar</b>
-        <ul>
-          <li>• Fruita</li>
-          <li>• Fruits secs</li>
-          <li>• Iogurt</li>
-        </ul>
-      </div>
+      function bindEvents() {
+        document.querySelectorAll('[data-tab]').forEach(btn => {
+          btn.onclick = () => { state.activeTab = btn.dataset.tab; saveState(); render(); };
+        });
+        document.querySelector('[data-action="prev-week"]')?.addEventListener('click', () => { state.week = Math.max(1, state.week - 1); saveState(); render(); });
+        document.querySelector('[data-action="next-week"]')?.addEventListener('click', () => { state.week = Math.min(24, state.week + 1); saveState(); render(); });
+        document.querySelector('[data-action="reset-week"]')?.addEventListener('click', () => {
+          const plan = getWeekPlan(state.week);
+          plan.forEach((session, i) => {
+            delete state.checks[`${state.week}-${i}`];
+            state.logs[`${state.week}-${i}`] = { plannedType: session.type, actualType: session.type, time:"", distance:"", feeling:"", notes:"", adapted:false };
+          });
+          saveState(); render();
+        });
+        document.querySelectorAll('[data-action="toggle-check"]').forEach(el => {
+          el.onchange = () => { const idx = el.dataset.idx; const key = `${state.week}-${idx}`; state.checks[key] = el.checked; saveState(); render(); };
+        });
+        document.querySelectorAll('[data-action="toggle-alt"]').forEach(el => {
+          el.onclick = () => { const box = document.getElementById(`alt-${el.dataset.idx}`); box.classList.toggle('hidden'); };
+        });
+        document.querySelectorAll('[data-action="apply-alt"]').forEach(el => {
+          el.onclick = () => { const idx = el.dataset.idx; const type = el.dataset.type; const session = getWeekPlan(state.week)[idx]; state.logs[`${state.week}-${idx}`].plannedType = session.type; state.logs[`${state.week}-${idx}`].actualType = type; state.logs[`${state.week}-${idx}`].adapted = type !== session.type; saveState(); render(); };
+        });
+        document.querySelectorAll('[data-action="reset-alt"]').forEach(el => {
+          el.onclick = () => { const idx = el.dataset.idx; const session = getWeekPlan(state.week)[idx]; state.logs[`${state.week}-${idx}`].plannedType = session.type; state.logs[`${state.week}-${idx}`].actualType = session.type; state.logs[`${state.week}-${idx}`].adapted = false; saveState(); render(); };
+        });
+        document.querySelector('[data-goal]')?.addEventListener('change', (e) => { state.goal = e.target.value; saveState(); render(); });
+        document.querySelector('[data-notes]')?.addEventListener('input', (e) => { state.notes = e.target.value; saveState(); });
+        ["weight","restingHR","runComfortPace","bikeNotes","swimNotes"].forEach(field => {
+          document.querySelector(`[data-metric="${field}"]`)?.addEventListener('input', (e) => { state.metrics[field] = e.target.value; saveState(); });
+        });
+        getWeekPlan(state.week).forEach((session, idx) => {
+          document.querySelector(`[data-log-type="${idx}"]`)?.addEventListener('change', e => { state.logs[`${state.week}-${idx}`].actualType = e.target.value; state.logs[`${state.week}-${idx}`].adapted = e.target.value !== session.type; saveState(); render(); });
+          document.querySelector(`[data-log-time="${idx}"]`)?.addEventListener('input', e => { state.logs[`${state.week}-${idx}`].time = e.target.value; saveState(); });
+          document.querySelector(`[data-log-distance="${idx}"]`)?.addEventListener('input', e => { state.logs[`${state.week}-${idx}`].distance = e.target.value; saveState(); });
+          document.querySelector(`[data-log-feeling="${idx}"]`)?.addEventListener('change', e => { state.logs[`${state.week}-${idx}`].feeling = e.target.value; saveState(); });
+          document.querySelector(`[data-log-notes="${idx}"]`)?.addEventListener('input', e => { state.logs[`${state.week}-${idx}`].notes = e.target.value; saveState(); });
+        });
+      }
 
-      <div>
-        <b>Sopar</b>
-        <ul>
-          <li>• Verdures + proteïna</li>
-          <li>• Peix o carn</li>
-        </ul>
-      </div>
+      function statCard(label, value) { return `<div class="rounded-2xl border bg-white p-4"><div class="text-sm text-slate-500">${label}</div><div class="mt-2 text-2xl font-semibold">${value}</div></div>`; }
+      function tabButton(id, label) { return `<button data-tab="${id}" class="rounded-2xl px-3 py-3 text-sm font-medium ${state.activeTab === id ? 'bg-slate-900 text-white' : 'bg-slate-100'}">${label}</button>`; }
+      function metricField(key,label,placeholder) { return `<div><label class="mb-1 block text-sm text-slate-600">${label}</label><input data-metric="${key}" class="w-full rounded-xl border p-3" placeholder="${placeholder}" value="${escapeHtml(state.metrics[key] || '')}"></div>`; }
+      function warmupBox(title, items) { return `<div class="rounded-2xl border p-4"><div class="font-semibold">${title}</div><ul class="mt-2 space-y-1 text-sm text-slate-600">${items.map(i => `<li>• ${i}</li>`).join("")}</ul></div>`; }
+      function mealIdeasCard(title, items) { return `<div class="rounded-2xl border p-4"><div class="font-semibold">${title}</div><ul class="mt-2 space-y-1 text-sm text-slate-600">${items.map(i => `<li>• ${i}</li>`).join("")}</ul></div>`; }
+      function goalCard(label, value) { return `<div class="rounded-2xl border p-4"><div class="text-sm text-slate-600">${label}</div><div class="mt-1 text-lg font-semibold">${value}</div></div>`; }
+      function checkItem(text) { return `<div class="rounded-2xl border p-3">• ${text}</div>`; }
+      function escapeHtml(str) { return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-    </div>
-
-    <div class="mt-3 text-sm text-gray-600">
-      • Proteïna a cada àpat<br>
-      • Hidrats abans/després entreno<br>
-      • Hidratació constant
-    </div>
-  </div>
-
-</div>
-
-</body>
+      render();
+    </script>
+  </body>
 </html>
